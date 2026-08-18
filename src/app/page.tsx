@@ -1,426 +1,344 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useSyncExternalStore } from "react";
+import { useState, useEffect } from "react";
 
-/* ---------- Types ---------- */
-interface Todo {
-  id: string;
-  text: string;
-  completed: boolean;
-  createdAt: number;
-  updatedAt: number;
-}
+/* ---------- Data ---------- */
+const courses = [
+  {
+    name: "Singing 聲樂班",
+    desc: "專業聲樂訓練，教授正確發聲技巧、氣息控制及歌曲演繹，培養孩子音樂天賦。",
+    price: "HK$800 / 4堂",
+    image: "/OpenClaw0804/images/photo-1.jpg",
+  },
+  {
+    name: "Yelling 朗誦班",
+    desc: "提升語言表達能力，透過朗誦訓練增強自信心、咬字發音及舞台表現力。",
+    price: "HK$600 / 4堂",
+    image: "/OpenClaw0804/images/photo-3.jpg",
+  },
+  {
+    name: "Shouting 演講班",
+    desc: "訓練小朋友演講技巧，學習組織思路、控場能力及即興表達，建立領袖風範。",
+    price: "HK$700 / 4堂",
+    image: "/OpenClaw0804/images/photo-4.jpg",
+  },
+  {
+    name: "綜合表達班",
+    desc: "結合聲樂、朗誦及演講元素，全方位提升小朋友的表達能力與舞台自信。",
+    price: "HK$900 / 4堂",
+    image: "/OpenClaw0804/images/photo-5.jpg",
+  },
+];
 
-type Filter = "all" | "active" | "completed";
+const teachers = [
+  {
+    name: "陳老師",
+    role: "聲樂導師",
+    bio: "香港演藝學院聲樂系畢業，擁有 10 年兒童聲樂教學經驗。",
+    emoji: "🎵",
+  },
+  {
+    name: "李老師",
+    role: "朗誦導師",
+    bio: "中文大學中文系碩士，資深朗誦比賽評審及培訓導師。",
+    emoji: "🎤",
+  },
+  {
+    name: "王老師",
+    role: "演講導師",
+    bio: "前電視台主播，專長演講技巧培訓及兒童自信心建立。",
+    emoji: "📢",
+  },
+];
 
-/* ---------- Icons ---------- */
-const IconCheck = ({ className = "" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
-
-const IconEdit = ({ className = "" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-  </svg>
-);
-
-const IconTrash = ({ className = "" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="3 6 5 6 21 6" />
-    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-    <path d="M10 11v6M14 11v6" />
-    <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
-  </svg>
-);
-
-const IconPlus = ({ className = "" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="5" x2="12" y2="19" />
-    <line x1="5" y1="12" x2="19" y2="12" />
-  </svg>
-);
-
-const IconSun = ({ className = "" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="5" />
-    <line x1="12" y1="1" x2="12" y2="3" />
-    <line x1="12" y1="21" x2="12" y2="23" />
-    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-    <line x1="1" y1="12" x2="3" y2="12" />
-    <line x1="21" y1="12" x2="23" y2="12" />
-    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-  </svg>
-);
-
-const IconMoon = ({ className = "" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-  </svg>
-);
-
-/* ---------- Utils ---------- */
-const STORAGE_KEY = "todo-app-data";
-const THEME_KEY = "todo-theme";
-
-function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
-
-function formatDate(ts: number): string {
-  const now = Date.now();
-  const diff = now - ts;
-  const mins = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-  if (mins < 1) return "剛剛";
-  if (mins < 60) return `${mins} 分鐘前`;
-  if (hours < 24) return `${hours} 小時前`;
-  if (days < 7) return `${days} 天前`;
-  return new Date(ts).toLocaleDateString("zh-TW");
-}
+const philosophy = [
+  { icon: "🌱", title: "因材施教", desc: "根據每個孩子的特質與興趣，量身定制教學方案。" },
+  { icon: "💡", title: "啟發潛能", desc: "不只是傳授技巧，更注重啟發孩子內在的表達欲望。" },
+  { icon: "🤝", title: "建立自信", desc: "透過舞台實踐與正向鼓勵，讓孩子勇敢站出來。" },
+  { icon: "🎯", title: "成果導向", desc: "定期舉辦展演與比賽，讓學習成果看得見。" },
+];
 
 /* ---------- Component ---------- */
-function loadTodos(): Todo[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as Todo[];
-  } catch {
-    // ignore parse errors
-  }
-  return [];
-}
+export default function HomePage() {
+  const [scrolled, setScrolled] = useState(false);
 
-function loadDarkMode(): boolean {
-  if (typeof window === "undefined") return false;
-  const theme = localStorage.getItem(THEME_KEY);
-  return theme === "dark" || (!theme && window.matchMedia("(prefers-color-scheme: dark)").matches);
-}
-
-export default function TodoApp() {
-  const [todos, setTodos] = useState<Todo[]>(() => loadTodos());
-  const [input, setInput] = useState("");
-  const [filter, setFilter] = useState<Filter>("all");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editText, setEditText] = useState("");
-  const [isDark, setIsDark] = useState(() => loadDarkMode());
-  const mounted = useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false
-  );
-  const editInputRef = useRef<HTMLInputElement>(null);
-
-  /* ----- Save to localStorage ----- */
   useEffect(() => {
-    if (mounted) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
-    }
-  }, [todos, mounted]);
-
-  /* ----- Theme toggle ----- */
-  const toggleTheme = useCallback(() => {
-    const next = !isDark;
-    setIsDark(next);
-    localStorage.setItem(THEME_KEY, next ? "dark" : "light");
-    if (next) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [isDark]);
-
-  /* ----- Focus edit input ----- */
-  useEffect(() => {
-    if (editingId && editInputRef.current) {
-      editInputRef.current.focus();
-      editInputRef.current.select();
-    }
-  }, [editingId]);
-
-  /* ----- Actions ----- */
-  const addTodo = () => {
-    const text = input.trim();
-    if (!text) return;
-    const todo: Todo = {
-      id: generateId(),
-      text,
-      completed: false,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    setTodos((prev) => [todo, ...prev]);
-    setInput("");
-  };
-
-  const toggleTodo = (id: string) => {
-    setTodos((prev) =>
-      prev.map((t) =>
-        t.id === id ? { ...t, completed: !t.completed, updatedAt: Date.now() } : t
-      )
-    );
-  };
-
-  const deleteTodo = (id: string) => {
-    setTodos((prev) => prev.filter((t) => t.id !== id));
-  };
-
-  const startEdit = (todo: Todo) => {
-    setEditingId(todo.id);
-    setEditText(todo.text);
-  };
-
-  const saveEdit = () => {
-    const text = editText.trim();
-    if (!text) {
-      setEditingId(null);
-      return;
-    }
-    setTodos((prev) =>
-      prev.map((t) =>
-        t.id === editingId ? { ...t, text, updatedAt: Date.now() } : t
-      )
-    );
-    setEditingId(null);
-    setEditText("");
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditText("");
-  };
-
-  const clearCompleted = () => {
-    setTodos((prev) => prev.filter((t) => !t.completed));
-  };
-
-  /* ----- Filtered todos ----- */
-  const filtered = todos.filter((t) => {
-    if (filter === "active") return !t.completed;
-    if (filter === "completed") return t.completed;
-    return true;
-  });
-
-  const activeCount = todos.filter((t) => !t.completed).length;
-  const completedCount = todos.filter((t) => t.completed).length;
-
-  /* ----- Keyboard ----- */
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") addTodo();
-  };
-
-  if (!mounted) {
-    return <div className="min-h-screen bg-background" />;
-  }
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-background transition-colors duration-300">
-      {/* Decorative background */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-accent/20 rounded-full blur-3xl" />
-      </div>
-
-      <main className="relative z-10 max-w-2xl mx-auto px-4 py-8 sm:py-12">
-        {/* Header */}
-        <header className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
-              Todo List
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {activeCount > 0
-                ? `還有 ${activeCount} 項待完成`
-                : "全部完成 🎉"}
-            </p>
+    <div className="min-h-screen bg-[rgb(var(--bg))]">
+      {/* ===== Nav ===== */}
+      <nav
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          scrolled
+            ? "bg-white/90 backdrop-blur-md shadow-sm py-3"
+            : "bg-transparent py-5"
+        }`}
+      >
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between">
+          <a href="#home" className="flex items-center gap-2">
+            <span className="text-2xl">🎹</span>
+            <span className="text-xl font-bold text-pink-600">MaMa</span>
+          </a>
+          <div className="hidden sm:flex items-center gap-6 text-sm font-medium text-gray-700">
+            <a href="#about" className="hover:text-pink-600 transition-colors">關於我們</a>
+            <a href="#philosophy" className="hover:text-pink-600 transition-colors">教學理念</a>
+            <a href="#courses" className="hover:text-pink-600 transition-colors">課程</a>
+            <a href="#teachers" className="hover:text-pink-600 transition-colors">師資</a>
+            <a href="#contact" className="hover:text-pink-600 transition-colors">聯絡</a>
           </div>
-          <button
-            onClick={toggleTheme}
-            className="p-2.5 rounded-xl bg-card hover:bg-accent border border-border transition-colors duration-200 text-foreground"
-            aria-label="切換主題"
-          >
-            {isDark ? <IconSun className="w-5 h-5" /> : <IconMoon className="w-5 h-5" />}
-          </button>
-        </header>
-
-        {/* Input */}
-        <div className="flex gap-2 mb-6">
-          <div className="relative flex-1">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="新增待辦事項…"
-              className="w-full px-4 py-3 pl-12 rounded-xl bg-card border border-input text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200"
-            />
-            <IconPlus className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          </div>
-          <button
-            onClick={addTodo}
-            disabled={!input.trim()}
-            className="px-5 py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 active:scale-95"
-          >
-            新增
-          </button>
+          <a href="#contact" className="btn-primary text-sm sm:hidden">報名</a>
+          <a href="#contact" className="btn-primary text-sm hidden sm:inline-flex">立即報名</a>
         </div>
+      </nav>
 
-        {/* Filters */}
-        {todos.length > 0 && (
-          <div className="flex items-center gap-1 mb-4 p-1 rounded-xl bg-card border border-border">
-            {([
-              { key: "all" as Filter, label: "全部" },
-              { key: "active" as Filter, label: "進行中" },
-              { key: "completed" as Filter, label: "已完成" },
-            ]).map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => setFilter(key)}
-                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  filter === key
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+      {/* ===== Hero ===== */}
+      <section id="home" className="relative min-h-[600px] flex items-center justify-center overflow-hidden">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: "url(/OpenClaw0804/images/photo-1.jpg)" }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-pink-900/70 via-pink-800/60 to-pink-900/80" />
+
+        <div className="relative z-10 text-center px-4 max-w-3xl mx-auto">
+          <div className="inline-block mb-4 animate-float">
+            <span className="text-6xl sm:text-7xl">🎹</span>
           </div>
-        )}
+          <h1 className="text-4xl sm:text-6xl font-bold text-white mb-4 animate-fade-in-up">
+            MaMa 教育中心
+          </h1>
+          <p className="text-lg sm:text-xl text-pink-100 mb-8 animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
+            用愛與專業，啟發每個孩子的聲音力量
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
+            <a href="#courses" className="btn-primary">探索課程</a>
+            <a href="#about" className="inline-flex items-center justify-center px-6 py-3 rounded-full border-2 border-white/70 text-white font-medium hover:bg-white/10 transition-all duration-200">了解更多</a>
+          </div>
+        </div>
+      </section>
 
-        {/* Todo List */}
-        <div className="space-y-2">
-          {filtered.length === 0 ? (
-            <div className="text-center py-16 animate-fade-in">
-              <div className="text-5xl mb-4">
-                {filter === "completed" ? "✅" : "📝"}
-              </div>
-              <p className="text-muted-foreground">
-                {filter === "completed"
-                  ? "沒有已完成的項目"
-                  : filter === "active"
-                  ? "沒有進行中的項目"
-                  : todos.length === 0
-                  ? "還沒有待辦事項，新增一個吧！"
-                  : "沒有符合的項目"}
+      {/* ===== About ===== */}
+      <section id="about" className="py-20 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid sm:grid-cols-2 gap-10 items-center">
+            <div>
+              <span className="text-pink-500 font-medium text-sm tracking-wider uppercase">關於我們</span>
+              <h2 className="section-title text-left mt-2 mb-6">公司簡介</h2>
+              <p className="text-gray-600 leading-relaxed mb-4">
+                MaMa 教育中心成立於 2020 年，是一所專注於小朋友聲樂、朗誦及演講培訓的私人教育機構。
+                我們深信每個孩子都擁有獨特的聲音與表達潛力，透過專業的教學團隊與系統化的課程，
+                讓孩子在快樂中學習，在自信中成長。
+              </p>
+              <p className="text-gray-600 leading-relaxed">
+                中心配備專業隔音教室及演出場地，累計培訓超過 500 名學員，
+                多名學員在各類朗誦及演講比賽中屢獲佳績。
               </p>
             </div>
-          ) : (
-            filtered.map((todo) => (
-              <div
-                key={todo.id}
-                className="group flex items-center gap-3 p-3.5 rounded-xl bg-card border border-border hover:border-primary/40 hover:shadow-sm transition-all duration-200 animate-slide-in"
-              >
-                {/* Checkbox */}
-                <button
-                  onClick={() => toggleTodo(todo.id)}
-                  className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-                    todo.completed
-                      ? "bg-primary border-primary text-primary-foreground"
-                      : "border-input hover:border-primary"
-                  }`}
-                  aria-label={todo.completed ? "標記為未完成" : "標記為完成"}
-                >
-                  {todo.completed && <IconCheck className="w-3.5 h-3.5 animate-checkmark" />}
-                </button>
-
-                {/* Content / Edit */}
-                {editingId === todo.id ? (
-                  <div className="flex-1 flex gap-2">
-                    <input
-                      ref={editInputRef}
-                      type="text"
-                      value={editText}
-                      onChange={(e) => setEditText(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") saveEdit();
-                        if (e.key === "Escape") cancelEdit();
-                      }}
-                      className="flex-1 px-3 py-1.5 rounded-lg bg-background border border-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                    />
-                    <button
-                      onClick={saveEdit}
-                      className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
-                    >
-                      儲存
-                    </button>
-                    <button
-                      onClick={cancelEdit}
-                      className="px-3 py-1.5 rounded-lg bg-muted text-muted-foreground text-sm font-medium hover:bg-accent transition-colors"
-                    >
-                      取消
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex-1 min-w-0 cursor-pointer" onClick={() => toggleTodo(todo.id)}>
-                    <p
-                      className={`text-sm sm:text-base transition-all duration-200 ${
-                        todo.completed
-                          ? "text-muted-foreground line-through"
-                          : "text-foreground"
-                      }`}
-                    >
-                      {todo.text}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {formatDate(todo.createdAt)}
-                    </p>
-                  </div>
-                )}
-
-                {/* Actions */}
-                {editingId !== todo.id && (
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <button
-                      onClick={() => startEdit(todo)}
-                      className="p-2 rounded-lg text-muted-foreground hover:text-accent-fg hover:bg-accent transition-colors"
-                      aria-label="編輯"
-                    >
-                      <IconEdit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => deleteTodo(todo.id)}
-                      className="p-2 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-                      aria-label="刪除"
-                    >
-                      <IconTrash className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Footer */}
-        {todos.length > 0 && (
-          <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
-            <p className="text-xs text-muted-foreground">
-              共 {todos.length} 項 · {completedCount} 已完成
-            </p>
-            {completedCount > 0 && (
-              <button
-                onClick={clearCompleted}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                清除已完成
-              </button>
-            )}
+            <div className="relative rounded-3xl overflow-hidden shadow-2xl">
+              <img
+                src="/OpenClaw0804/images/photo-2.jpg"
+                alt="MaMa 教育中心環境"
+                className="w-full h-80 object-cover"
+              />
+            </div>
           </div>
-        )}
+        </div>
+      </section>
 
-        {/* Footer credit */}
-        <footer className="mt-12 text-center">
-          <p className="text-xs text-muted-foreground">
-            資料儲存於本機 LocalStorage · 關閉瀏覽器不會遺失
-          </p>
-        </footer>
-      </main>
+      {/* ===== Philosophy ===== */}
+      <section id="philosophy" className="py-20 px-4 sm:px-6 bg-gradient-to-b from-pink-50 to-white">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="section-title">教學理念</h2>
+          <p className="section-subtitle">我們相信，教育不只是技能傳授，更是品格與自信的培養</p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-12">
+            {philosophy.map((p, i) => (
+              <div
+                key={i}
+                className="bg-white rounded-2xl p-6 text-center shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200"
+              >
+                <div className="text-4xl mb-3">{p.icon}</div>
+                <h3 className="font-bold text-lg mb-2 text-gray-800">{p.title}</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">{p.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== Courses ===== */}
+      <section id="courses" className="py-20 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="section-title">課程介紹</h2>
+          <p className="section-subtitle">專業課程，全面培養孩子的表達能力</p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-2 gap-8 mt-12">
+            {courses.map((course, i) => (
+              <div
+                key={i}
+                className="group bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300"
+              >
+                <div className="relative h-56 overflow-hidden">
+                  <img
+                    src={course.image}
+                    alt={course.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full px-4 py-1.5 text-sm font-bold text-pink-600">
+                    {course.price}
+                  </div>
+                </div>
+                <div className="p-6">
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">{course.name}</h3>
+                  <p className="text-gray-600 text-sm leading-relaxed mb-4">{course.desc}</p>
+                  <a
+                    href="#contact"
+                    className="inline-flex items-center gap-1 text-pink-600 font-medium text-sm hover:gap-2 transition-all"
+                  >
+                    Learn More
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                      <polyline points="12 5 19 12 12 19" />
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== Teachers ===== */}
+      <section id="teachers" className="py-20 px-4 sm:px-6 bg-gradient-to-b from-pink-50 to-white">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="section-title">師資介紹</h2>
+          <p className="section-subtitle">經驗豐富的專業導師團隊</p>
+          <div className="grid sm:grid-cols-3 gap-8 mt-12">
+            {teachers.map((t, i) => (
+              <div
+                key={i}
+                className="bg-white rounded-2xl p-8 text-center shadow-sm hover:shadow-lg transition-all duration-200"
+              >
+                <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-pink-100 flex items-center justify-center text-4xl">
+                  {t.emoji}
+                </div>
+                <h3 className="font-bold text-lg text-gray-800">{t.name}</h3>
+                <p className="text-pink-500 text-sm font-medium mb-3">{t.role}</p>
+                <p className="text-sm text-gray-600 leading-relaxed">{t.bio}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== Contact ===== */}
+      <section id="contact" className="py-20 px-4 sm:px-6">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="section-title">聯絡我們</h2>
+          <p className="section-subtitle">歡迎預約免費試堂，讓我們了解您的孩子</p>
+          <div className="grid sm:grid-cols-2 gap-8 mt-12">
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">📍</span>
+                <div>
+                  <p className="font-medium text-gray-800">地址</p>
+                  <p className="text-sm text-gray-600">香港九龍旺角彌敦道 123 號 3 樓</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">📞</span>
+                <div>
+                  <p className="font-medium text-gray-800">電話</p>
+                  <p className="text-sm text-gray-600">+852 1234 5678</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">✉️</span>
+                <div>
+                  <p className="font-medium text-gray-800">電郵</p>
+                  <p className="text-sm text-gray-600">hello@mama-edu.hk</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">🕐</span>
+                <div>
+                  <p className="font-medium text-gray-800">營業時間</p>
+                  <p className="text-sm text-gray-600">週一至週五 10:00-19:00</p>
+                  <p className="text-sm text-gray-600">週六 09:00-18:00</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-pink-50 rounded-3xl p-8">
+              <h3 className="font-bold text-lg text-gray-800 mb-4">預約免費試堂</h3>
+              <p className="text-sm text-gray-600 mb-6">
+                填寫以下資料，我們將於 24 小時內與您聯絡安排試堂時間。
+              </p>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="家長姓名"
+                  className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-transparent"
+                />
+                <input
+                  type="tel"
+                  placeholder="聯絡電話"
+                  className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-transparent"
+                />
+                <select className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-transparent text-gray-600">
+                  <option>選擇課程</option>
+                  <option>Singing 聲樂班</option>
+                  <option>Yelling 朗誦班</option>
+                  <option>Shouting 演講班</option>
+                  <option>綜合表達班</option>
+                </select>
+                <button className="btn-primary w-full">提交預約</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== Footer ===== */}
+      <footer className="bg-gray-900 text-gray-400 py-12 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid sm:grid-cols-3 gap-8 mb-8">
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-2xl">🎹</span>
+                <span className="text-lg font-bold text-white">MaMa 教育中心</span>
+              </div>
+              <p className="text-sm">用愛與專業，啟發每個孩子的聲音力量</p>
+            </div>
+            <div>
+              <p className="font-medium text-white mb-3">快速連結</p>
+              <div className="space-y-1 text-sm">
+                <a href="#about" className="block hover:text-pink-400 transition-colors">關於我們</a>
+                <a href="#courses" className="block hover:text-pink-400 transition-colors">課程介紹</a>
+                <a href="#teachers" className="block hover:text-pink-400 transition-colors">師資介紹</a>
+                <a href="#contact" className="block hover:text-pink-400 transition-colors">聯絡我們</a>
+              </div>
+            </div>
+            <div>
+              <p className="font-medium text-white mb-3">關注我們</p>
+              <div className="flex gap-3">
+                <a href="#contact" className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-pink-600 transition-colors">
+                  <span className="text-lg">📘</span>
+                </a>
+                <a href="#contact" className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-pink-600 transition-colors">
+                  <span className="text-lg">📷</span>
+                </a>
+                <a href="#contact" className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-pink-600 transition-colors">
+                  <span className="text-lg">💬</span>
+                </a>
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-gray-800 pt-6 text-center text-xs">
+            <p>© 2026 MaMa 教育中心. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

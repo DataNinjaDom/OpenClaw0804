@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Todo List — 簡潔待辦",
-  description: "一個簡潔、現代的待辦事項管理工具",
+  title: "MaMa Education Center — 小朋友私人教育中心",
+  description: "MaMa 教育中心 — 專業聲樂、朗誦、演講培訓，啟發孩子潛能",
   icons: {
-    icon: "/favicon.svg",
+    icon: "/OpenClaw0804/favicon.svg",
   },
 };
 
@@ -16,20 +16,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-Hant" suppressHydrationWarning>
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                const theme = localStorage.getItem('todo-theme');
-                if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                  document.documentElement.classList.add('dark');
-                }
-              })();
-            `,
-          }}
-        />
-      </head>
       <body className="min-h-screen antialiased">{children}</body>
     </html>
   );
