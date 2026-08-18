@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: 250 250 252;
+    --fg: 17 17 27;
+    --card: 255 255 255;
+    --card-fg: 17 17 27;
+    --primary: 99 102 241;
+    --primary-fg: 255 255 255;
+    --muted: 241 242 246;
+    --muted-fg: 107 114 128;
+    --accent: 239 246 255;
+    --accent-fg: 37 99 235;
+    --border: 229 231 235;
+    --input: 229 231 235;
+    --ring: 99 102 241;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --bg: 9 9 14;
+    --fg: 240 240 245;
+    --card: 17 17 27;
+    --card-fg: 240 240 245;
+    --primary: 129 140 248;
+    --primary-fg: 9 9 14;
+    --muted: 31 31 42;
+    --muted-fg: 156 163 175;
+    --accent: 30 30 42;
+    --accent-fg: 199 210 254;
+    --border: 31 31 42;
+    --input: 31 31 42;
+    --ring: 129 140 248;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/30 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/50;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes checkmark {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+.animate-slide-in {
+  animation: slideIn 0.25s ease-out;
+}
+.animate-checkmark {
+  animation: checkmark 0.3s ease-out;
+}
