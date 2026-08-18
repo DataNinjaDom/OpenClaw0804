@@ -80,7 +80,7 @@ export default function HomePage() {
       >
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between">
           <a href="#home" className="flex items-center gap-2">
-            <span className="text-2xl">🎹</span>
+            <span className="text-2xl">💩</span>
             <span className="text-xl font-bold text-pink-600">MaMa</span>
           </a>
           <div className="hidden sm:flex items-center gap-6 text-sm font-medium text-gray-700">
@@ -105,7 +105,7 @@ export default function HomePage() {
 
         <div className="relative z-10 text-center px-4 max-w-3xl mx-auto">
           <div className="inline-block mb-4 animate-float">
-            <span className="text-6xl sm:text-7xl">🎹</span>
+            <span className="text-6xl sm:text-7xl">💩</span>
           </div>
           <h1 className="text-4xl sm:text-6xl font-bold text-white mb-4 animate-fade-in-up">
             MaMa 教育中心
@@ -305,7 +305,7 @@ export default function HomePage() {
           <div className="grid sm:grid-cols-3 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-2xl">🎹</span>
+                <span className="text-2xl">💩</span>
                 <span className="text-lg font-bold text-white">MaMa 教育中心</span>
               </div>
               <p className="text-sm">用愛與專業，啟發每個孩子的聲音力量</p>
