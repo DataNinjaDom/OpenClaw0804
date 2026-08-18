@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MaMa Education Center — 小朋友私人教育中心",
-  description: "MaMa 教育中心 — 專業聲樂、朗誦、演講培訓，啟發孩子潛能",
+  title: "Johnny Japan 日式餐廳 — 一期一會・旬之味",
+  description: "Johnny Japan 日式料理餐廳，由日籍主廚 Johnny Tanaka 主理，築地直送，職人匠心。",
   icons: {
     icon: "/OpenClaw0804/favicon.svg",
   },
